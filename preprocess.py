@@ -71,6 +71,7 @@ def get_random_scp():
 def create_scp():
     label_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_label')
     cmp_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_cmp')
+
     label_files = os.listdir(label_dir)
     cmp_files = os.listdir(cmp_dir)
 

@@ -77,7 +77,10 @@ def calculate_cmvn(name, config_dir, output_dir):
 
 
 def convert_to(name, config_dir, output_dir, apply_cmvn=True):
-    os.mkdir(output_dir)
+    if os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    if os.path.exists(config_dir):
+        os.mkdir(config_dir)
     cmvn = np.load(os.path.join(output_dir, "train_cmvn.npz"))
     config_file = open(os.path.join(config_dir, name + ".lst"))
     for line in config_file:

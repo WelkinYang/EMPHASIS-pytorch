@@ -20,7 +20,7 @@ def create_train_model(model_type):
 
 def build_duration_model():
     model = EMPHASISDurationModel(
-        in_channels=hparams['duration_in_channels'],
+        in_channels=hparams['in_channels'],
         units=hparams['duration_units'],
         bank_widths=hparams['duration_convolutional_bank_widths'],
         max_pooling_width=hparams['duration_max_pooling_width'],
@@ -32,7 +32,7 @@ def build_duration_model():
 
 def build_acoustic_model():
     model = EMPHASISAcousticModel(
-        in_channels=hparams['acoustic_in_channels'],
+        in_channels=hparams['in_channels'],
         units=hparams['acoustic_units'],
         bank_widths=hparams['acoustic_convolutional_bank_widths'],
         max_pooling_width=hparams['acoustic_max_pooling_width'],

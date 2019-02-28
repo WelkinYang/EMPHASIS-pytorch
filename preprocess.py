@@ -1,6 +1,11 @@
 import os
 import sys
+import json
 import random
+from utils import calculate_cmvn, convert_to
+
+with open('./hparams.json', 'r') as f:
+    hparams = json.load(f)
 
 train_ratio = 0.85
 valid_ratio = 0.1
@@ -11,6 +16,7 @@ raw = 'raw'
 label_scp_dir = raw + '/prepared_label/label_scp/'
 param_scp_dir = raw + '/prepared_cmp/param_scp/'
 lst_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
+data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
 
 def get_random_scp():
     label_scp = open(label_scp_dir + 'all.scp')
@@ -61,6 +67,7 @@ def get_random_scp():
             label_train.write(line_label)
             param_train.write(line_param)
             lst_train.write(line_lst)
+
 def create_scp():
     label_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_label')
     cmp_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_cmp')
@@ -84,6 +91,11 @@ def create_scp():
 def main():
     create_scp()
     get_random_scp()
+    #cal cmvn to the data
+    calculate_cmvn('train', lst_dir, data_dir)
+    convert_to('train', os.path.join(data_dir, 'train'))
+    convert_to('valid', os.path.join(data_dir, 'valid'))
+    convert_to('test', os.path.join(data_dir, 'test'))
 
 if __name__ == '__main__':
     main()

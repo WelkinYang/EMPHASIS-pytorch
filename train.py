@@ -7,6 +7,7 @@ import logging
 import argparse
 from sgdr import CosineWithRestarts
 from model_utils import create_train_model
+from utils import calculate_cmvn, convert_to
 from datasets import EMPHASISDataset, collate_fn
 
 import torch
@@ -185,6 +186,7 @@ def main():
     logging.basicConfig(format='%(asctime)s %(filename)s %(levelname)s %(message)s',
                         datefmt='%a, %d %b %Y %H:%M:%S', level=logging.DEBUG,
                         stream=sys.stdout)
+
     epoch = 0
     model_type = hparams['model_type']
     exp_name = args.name

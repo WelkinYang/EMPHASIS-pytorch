@@ -34,7 +34,7 @@ def highwaynet(inputs, activation, units=128):
     T = activation[1](T)
     return H * T + inputs * (1.0 - T)
 
-def calculate_cmvn(name, config_dir, input_dim, output_dim, output_dir):
+def calculate_cmvn(name, config_dir, output_dir):
     """Calculate mean and var."""
     logger.info("Calculating mean and var of %s" % name)
     config_filename = open(os.path.join(config_dir, name + '.lst'))
@@ -43,8 +43,8 @@ def calculate_cmvn(name, config_dir, input_dim, output_dim, output_dir):
     for line in config_filename:
         utt_id, inputs_path, labels_path = line.strip().split()
         logger.info("Reading utterance %s" % utt_id)
-        inputs = read_binary_file(inputs_path, input_dim)
-        labels = read_binary_file(labels_path, output_dim)
+        inputs = read_binary_file(inputs_path, hparams['in_channels'])
+        labels = read_binary_file(labels_path, hparams['target_channels'])
         if inputs_frame_count == 0:    # create numpy array for accumulating
             ex_inputs = np.sum(inputs, axis=0)
             ex2_inputs = np.sum(inputs**2, axis=0)
@@ -76,8 +76,8 @@ def calculate_cmvn(name, config_dir, input_dim, output_dim, output_dir):
     logger.info("Wrote to %s" % cmvn_name)
 
 
-def convert_to(name, output_dir, config_dir, input_dim, output_dim, apply_cmvn=True):
-    """Converts a dataset to tfrecords."""
+def convert_to(name, config_dir, output_dir, apply_cmvn=True):
+    os.mkdir(output_dir)
     cmvn = np.load(os.path.join(output_dir, "train_cmvn.npz"))
     config_file = open(os.path.join(config_dir, name + ".lst"))
     for line in config_file:
@@ -90,9 +90,9 @@ def convert_to(name, output_dir, config_dir, input_dim, output_dim, apply_cmvn=T
             inputs_outdir = os.path.join(output_dir, name) + f'{utt_id}.lab'
 
         logger.info(f'Writing utterance {utt_id} ...')
-        inputs = read_binary_file(inputs_path, input_dim).astype(np.float64)
+        inputs = read_binary_file(inputs_path, hparams['in_channels']).astype(np.float64)
         if name != 'test':
-            labels = read_binary_file(labels_path, output_dim).astype(np.float64)
+            labels = read_binary_file(labels_path, hparams['target_channels']).astype(np.float64)
         else:
             labels = None
         if apply_cmvn:

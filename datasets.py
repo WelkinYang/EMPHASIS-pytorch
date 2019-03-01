@@ -25,8 +25,8 @@ class EMPHASISDataset(Dataset):
 
     def __getitem__(self, index):
         id = self.meta_data.iloc[index]['id']
-        input = read_binary_file(f'{path}/label/{id}.lab')
-        target = read_binary_file(f'{path}/cmp/{id}.cmp')
+        input = read_binary_file(f'{path}/prepared_label/{id}.lab')
+        target = read_binary_file(f'{path}/prepared_cmp/{id}.cmp')
         return input, target
 
     def __len__(self):
@@ -56,7 +56,7 @@ def _pad_input(input, max_input_len):
 
 def _pad_target(target, max_target_len):
     if hparams['model_type'] == 'acoustic':
-        padded = np.zeros(max_target_len - len(target), hparams['acoustic_target_channels']) + \
+        padded = np.zeros(max_target_len - len(target), hparams['target_channels']) + \
                  hparams['acoustic_target_padded']
     else:
         padded = np.zeros(max_target_len - len(target)) + \

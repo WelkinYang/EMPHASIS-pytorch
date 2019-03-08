@@ -1,8 +1,10 @@
 import os
 import sys
+import argparse
 import json
 import random
-from utils import calculate_cmvn, convert_to
+import numpy as np
+from utils import calculate_cmvn, convert_to, read_binary_file, write_binary_file
 
 with open('./hparams.json', 'r') as f:
     hparams = json.load(f)
@@ -68,12 +70,38 @@ def get_random_scp():
             param_train.write(line_param)
             lst_train.write(line_lst)
 
-def create_scp():
+def create_scp(args):
     label_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_label')
     cmp_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_cmp')
 
-    label_files = os.listdir(label_dir)
-    cmp_files = os.listdir(cmp_dir)
+    label_files = os.listdir(args.label_dir)
+    cmp_files = os.listdir(args.cmp_dir)
+
+    # Do frame alignment
+    for line in label_files:
+        filename, _ = os.path.splitext(line.strip())
+        print('processing ' + filename)
+        sys.stdout.flush()
+
+        label_mat = np.loadtxt(os.path.join(args.label_dir, filename + '.lab'))
+        cmp_mat = read_binary_file(
+            os.path.join(args.cmp_dir, filename + ".cmp"),
+            dimension=hparams['target_channels']
+        )
+
+        if label_mat.shape[0] <= cmp_mat.shape[0]:
+            cmp_mat = cmp_mat[:label_mat.shape[0], :]
+        else:
+            frame_diff = label_mat.shape[0] - cmp_mat.shape[0]
+            rep = np.repeat(cmp_mat[-1:, :], frame_diff, axis=0)
+            cmp_mat = np.concatenate([cmp_mat, rep], axis=0)
+
+        write_binary_file(
+            label_mat,
+            os.path.join('prepared_label', filename + '.lab'))
+        write_binary_file(
+            cmp_mat,
+            os.path.join('prepared_cmp', filename + 'cmp'))
 
     label_scp = os.mkdir(os.path.join(label_dir, 'label_scp'))
     param_scp = os.mkdir(os.path.join(cmp_dir, 'param_scp'))
@@ -90,7 +118,12 @@ def create_scp():
         param_all_scp.write(cmp_filename + " " + cmp_file_path + "\n")
 
 def main():
-    create_scp()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('label_dir', type=str)
+    parser.add_argument('cmp_dir', type=str)
+    args = parser.parse_args()
+
+    create_scp(args)
     get_random_scp()
     #cal cmvn to the data
     calculate_cmvn('train', lst_dir, data_dir)

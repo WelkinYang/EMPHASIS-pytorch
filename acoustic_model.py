@@ -95,6 +95,6 @@ class EMPHASISAcousticModel(nn.Module):
         lf0_output, _ = self.lf0_linear(lf0_rnn_output)
         uv_output, _ = self.uv_linear(rnn_input)
 
-        outputs = torch.cat([spec_output, lf0_output, cap_output, energy_output], dim=-1)
+        outputs = torch.cat([spec_output, lf0_output, uv_output, cap_output, energy_output], dim=-1)
 
-        return outputs, uv_output
+        return outputs

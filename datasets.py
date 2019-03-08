@@ -11,7 +11,7 @@ with open('./hparams.json', 'r') as f:
     hparams = json.load(f)
 
 class EMPHASISDataset(Dataset):
-    def __init__(self, path, sort=True):
+    def __init__(self, path, type, sort=True):
         super(EMPHASISDataset, self).__init__()
         self.path = path
         self.meta_data = pd.read_csv(f'{path}/metadata.csv', sep='|',
@@ -19,6 +19,7 @@ class EMPHASISDataset(Dataset):
                                      index_col=False)
 
         self.meta_data.dropna(inplace=True)
+        self.type = type
 
         if sort:
             self.meta_data.sort_values(by=['frame_nums'], inplace=True)
@@ -26,8 +27,11 @@ class EMPHASISDataset(Dataset):
     def __getitem__(self, index):
         id = self.meta_data.iloc[index]['id']
         input = read_binary_file(f'{path}/label/{id}.lab', dimension=hparams['in_channels'])
-        target = read_binary_file(f'{path}/cmp/{id}.cmp', dimension=hparams['target_channels'])
-        return input, target
+        if self.type != 'test':
+            target = read_binary_file(f'{path}/cmp/{id}.cmp', dimension=hparams['target_channels'])
+            return input, target
+        else:
+            return input
 
     def __len__(self):
         return len(self.meta_data)

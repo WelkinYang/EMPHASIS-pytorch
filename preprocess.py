@@ -119,8 +119,8 @@ def create_scp(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('label_dir', type=str)
-    parser.add_argument('cmp_dir', type=str)
+    parser.add_argument('--label_dir', type=str)
+    parser.add_argument('--cmp_dir', type=str)
     args = parser.parse_args()
 
     create_scp(args)

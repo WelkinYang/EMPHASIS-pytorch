@@ -35,7 +35,10 @@ def train_one_acoustic_epoch(train_loader, model, device, optimizer):
                            target[:, :, -(hparams['energy'] + hparams['bap']):])
         uv_target = target[:, :, -1]
 
-        output, uv_output = model(input)
+        output = model(input)
+        output = torch.cat(output[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                           output[:, :, -(hparams['energy'] + hparams['bap']):])
+        uv_output = output[:, :, hparams['spec_units'] + hparams['lf0_units']]
         # mask the loss
         output *= mask
         uv_output *= mask
@@ -67,8 +70,9 @@ def eval_one_acoustic_epoch(valid_loader, model, device):
         uv_target = target[:, :, -1]
 
         output = model(input)
-        output = output[:, :, :hparams['acoustic_target_channels']-1]
-        uv_output = output[:, :, -1]
+        output = torch.cat(output[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                           output[:, :, -(hparams['energy'] + hparams['bap']):])
+        uv_output = output[:, :, hparams['spec_units'] + hparams['lf0_units']]
 
         # mask the loss
         output *= mask

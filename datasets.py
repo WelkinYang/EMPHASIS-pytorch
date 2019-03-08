@@ -25,8 +25,8 @@ class EMPHASISDataset(Dataset):
 
     def __getitem__(self, index):
         id = self.meta_data.iloc[index]['id']
-        input = read_binary_file(f'{path}/prepared_label/{id}.lab')
-        target = read_binary_file(f'{path}/prepared_cmp/{id}.cmp')
+        input = read_binary_file(f'{path}/label/{id}.lab', dimension=hparams['in_channels'])
+        target = read_binary_file(f'{path}/cmp/{id}.cmp', dimension=hparams['target_channels'])
         return input, target
 
     def __len__(self):

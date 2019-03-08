@@ -35,7 +35,15 @@ class EMPHASISAcousticModel(nn.Module):
         self.lf0_gru = nn.GRU(input_size=units, hidden_size=lf0_hidden_size, num_layers=gru_layer,
                               batch_first=True, bidirectional=True)
 
-        self.uv_linear = nn.Linear(units, 1)
+        self.spec_linear = nn.Linear(units, hparams['spec_units'])
+
+        self.cap_linear = nn.Linear(units, hparams['cap_units'])
+
+        self.lf0_linear = nn.Linear(units, hparams['lf0_units'])
+
+        self.energy_linear = nn.Linear(units, hparams['energy_units'])
+
+        self.uv_linear = nn.Linear(units, hparams['uv_units'])
 
         self.activation = activation
 
@@ -76,12 +84,17 @@ class EMPHASISAcousticModel(nn.Module):
         rnn_input = highway_input
 
         # Bidirectional RNN
-        spec_output, _ = self.spec_gru(rnn_input)
-        energy_output, _ = self.energy_gru(rnn_input)
-        cap_output, _ = self.cap_gru(rnn_input)
-        lf0_output, _ = self.lf0_gru(rnn_input)
+        spec_rnn_output, _ = self.spec_gru(rnn_input)
+        energy_rnn_output, _ = self.energy_gru(rnn_input)
+        cap_rnn_output, _ = self.cap_gru(rnn_input)
+        lf0_rnn_output, _ = self.lf0_gru(rnn_input)
+
+        spec_output, _ = self.spec_linear(spec_rnn_output)
+        energy_output, _ = self.energy_linear(energy_rnn_output)
+        cap_output, _ = self.cap_linear(cap_rnn_output)
+        lf0_output, _ = self.lf0_linear(lf0_rnn_output)
         uv_output, _ = self.uv_linear(rnn_input)
 
-        outputs = torch.cat([spec_output, energy_output, cap_output, lf0_output], dim=-1)
+        outputs = torch.cat([spec_output, lf0_output, cap_output, energy_output], dim=-1)
 
         return outputs, uv_output

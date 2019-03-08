@@ -27,11 +27,13 @@ def train_one_acoustic_epoch(train_loader, model, device, optimizer):
     num_steps = 0
 
     pbar = tqdm(train_loader, total=(len(train_loader)), unit=' batches')
-    for b, (input_batch, target_batch, uv_target_batch, mask) in enumerate(
+    for b, (input_batch, target_batch,  mask) in enumerate(
             pbar):
         input = input_batch.to(device=device)
         target = target_batch.to(device=device)
-        uv_target = uv_target_batch.to(device=device)
+        target = torch.cat(target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                           target[:, :, -(hparams['energy'] + hparams['bap']):])
+        uv_target = target[:, :, -1]
 
         output, uv_output = model(input)
         # mask the loss
@@ -60,7 +62,8 @@ def eval_one_acoustic_epoch(valid_loader, model, device):
         input = input_batch.to(device=device)
 
         target = target_batch.to(device=device)
-        target = target[:, :, :hparams['acoustic_target_channels']-1]
+        target = torch.cat(target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                           target[:, :, -(hparams['energy'] + hparams['bap']):])
         uv_target = target[:, :, -1]
 
         output = model(input)

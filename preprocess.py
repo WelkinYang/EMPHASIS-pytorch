@@ -100,7 +100,7 @@ def create_scp(args):
         label_all_scp.write(label_filename + " " + label_file_path + '\n')
 
     for cmp_filename in cmp_files:
-        if label_filename == 'param_scp':
+        if cmp_filename == 'param_scp':
             continue
         cmp_file_path = os.path.join(cmp_dir, cmp_filename)
         param_all_scp.write(cmp_filename + " " + cmp_file_path + "\n")

@@ -106,7 +106,7 @@ def create_scp(args):
             os.path.join(label_dir, filename + '.lab'))
         write_binary_file(
             cmp_mat,
-            os.path.join(cmp_dir, filename + 'cmp'))
+            os.path.join(cmp_dir, filename + '.cmp'))
 
     label_scp = os.mkdir(os.path.join(label_dir, 'label_scp'))
     param_scp = os.mkdir(os.path.join(cmp_dir, 'param_scp'))

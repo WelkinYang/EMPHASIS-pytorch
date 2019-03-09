@@ -9,9 +9,9 @@ from utils import calculate_cmvn, convert_to, read_binary_file, write_binary_fil
 with open('./hparams.json', 'r') as f:
     hparams = json.load(f)
 
-train_ratio = 0.85
-valid_ratio = 0.1
-test_ratio = 0.05
+train_ratio = 0.95
+valid_ratio = 0.04
+test_ratio = 0.01
 
 raw = 'raw'
 
@@ -82,6 +82,32 @@ def create_scp(args):
     label_files = os.listdir(args.label_dir)
     cmp_files = os.listdir(args.cmp_dir)
 
+    label_scp = os.mkdir(os.path.join(label_dir, 'label_scp'))
+    param_scp = os.mkdir(os.path.join(cmp_dir, 'param_scp'))
+
+    label_all_scp = open(os.path.join(label_scp, 'all.scp'), 'w')
+    param_all_scp = open(os.path.join(param_scp, 'all.scp'), 'w')
+
+    for label_filename in label_files:
+        label_file_path = os.path.join(label_dir, label_filename)
+        label_all_scp.write(label_filename + " " + label_file_path + '\n')
+
+    for cmp_filename in cmp_files:
+        cmp_file_path = os.path.join(cmp_dir, cmp_filename)
+        param_all_scp.write(cmp_filename + " " + cmp_file_path + "\n")
+
+def read_data(args):
+    label_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_label')
+    cmp_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_cmp')
+
+    if not os.path.exists(label_dir):
+        os.mkdir(label_dir)
+    if not os.path.exists(cmp_dir):
+        os.mkdir(cmp_dir)
+
+    label_files = os.listdir(args.label_dir)
+    cmp_files = os.listdir(args.cmp_dir)
+
     # Do frame alignment
     for line in label_files:
         filename, _ = os.path.splitext(line.strip())
@@ -108,26 +134,13 @@ def create_scp(args):
             cmp_mat,
             os.path.join(cmp_dir, filename + '.cmp'))
 
-    label_scp = os.mkdir(os.path.join(label_dir, 'label_scp'))
-    param_scp = os.mkdir(os.path.join(cmp_dir, 'param_scp'))
-
-    label_all_scp = open(os.path.join(label_scp, 'all.scp'), 'w')
-    param_all_scp = open(os.path.join(param_scp, 'all.scp'), 'w')
-
-    for label_filename in label_files:
-        label_file_path = os.path.join(label_dir, label_filename)
-        label_all_scp.write(label_filename + " " + label_file_path + '\n')
-
-    for cmp_filename in cmp_files:
-        cmp_file_path = os.path.join(cmp_dir, cmp_filename)
-        param_all_scp.write(cmp_filename + " " + cmp_file_path + "\n")
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--label_dir', type=str)
     parser.add_argument('--cmp_dir', type=str)
     args = parser.parse_args()
 
+    read_data(args)
     create_scp(args)
     get_random_scp()
     #cal cmvn to the data

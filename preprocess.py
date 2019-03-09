@@ -31,6 +31,9 @@ def get_random_scp():
     param_valid = open(param_scp_dir + 'valid.scp', 'w')
     param_test = open(param_scp_dir + 'test.scp', 'w')
 
+    if not os.path.exists(lst_dir):
+        os.mkdir(lst_dir)
+
     lst_train = open(lst_dir + 'train.lst', 'w')
     lst_valid = open(lst_dir + 'valid.lst', 'w')
     lst_test = open(lst_dir + 'test.lst', 'w')

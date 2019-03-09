@@ -83,16 +83,18 @@ def calculate_cmvn(name, config_dir, output_dir):
 def convert_to(name, config_dir, output_dir, apply_cmvn=True):
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
+    if not os.path.exists(os.path.join(output_dir, name)):
+        os.mkdir(os.path.join(output_dir, name))
     cmvn = np.load(os.path.join(output_dir, "train_cmvn.npz"))
-    config_file = open(os.path.join(config_dir, name + ".lst"))
+    config_file = open(config_dir + ".lst")
     for line in config_file:
         if name != 'test':
             utt_id, inputs_path, labels_path = line.strip().split()
-            inputs_outdir = os.path.join(output_dir, name) + f'{utt_id}.lab'
-            labels_outdir = os.path.join(output_dir, name) + f'{utt_id}.cmp'
+            inputs_outdir = os.path.join(output_dir, name, f'{utt_id}')
+            labels_outdir = os.path.join(output_dir, name, f'{utt_id}')
         else:
             utt_id, inputs_path = line.strip().split()
-            inputs_outdir = os.path.join(output_dir, name) + f'{utt_id}.lab'
+            inputs_outdir = os.path.join(output_dir, name, f'{utt_id}')
 
         logger.info(f'Writing utterance {utt_id} ...')
         inputs = read_binary_file(inputs_path, hparams['in_channels']).astype(np.float64)

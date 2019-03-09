@@ -191,8 +191,9 @@ def main():
 
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s %(filename)s %(levelname)s %(message)s',
-                        datefmt='%a, %d %b %Y %H:%M:%S', level=logging.DEBUG,
+                        datefmt='%a, %d %b %Y %H:%M:%S', level=logging.INFO,
                         stream=sys.stdout)
+
 
     epoch = 0
     model_type = hparams['model_type']

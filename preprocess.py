@@ -85,8 +85,10 @@ def create_scp(args):
     label_files = os.listdir(label_dir)
     cmp_files = os.listdir(cmp_dir)
 
-    os.mkdir(os.path.join(label_dir, 'label_scp'))
-    os.mkdir(os.path.join(cmp_dir, 'param_scp'))
+    if not os.path.exists(os.path.join(label_dir, 'label_scp')):
+        os.mkdir(os.path.join(label_dir, 'label_scp'))
+    if not os.path.exists(os.path.join(cmp_dir, 'param_scp')):
+        os.mkdir(os.path.join(cmp_dir, 'param_scp'))
 
     label_all_scp = open(os.path.join(os.path.join(label_dir, 'label_scp'), 'all.scp'), 'w')
     param_all_scp = open(os.path.join(os.path.join(cmp_dir, 'param_scp'), 'all.scp'), 'w')

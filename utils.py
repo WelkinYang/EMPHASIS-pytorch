@@ -85,16 +85,20 @@ def convert_to(name, config_dir, output_dir, apply_cmvn=True):
         os.mkdir(output_dir)
     if not os.path.exists(os.path.join(output_dir, name)):
         os.mkdir(os.path.join(output_dir, name))
+    if not os.path.exists(os.path.join(output_dir, name, 'label')):
+        os.mkdir(os.path.join(output_dir, name, 'label'))
+    if not os.path.exists(os.path.join(output_dir, name, 'cmp')):
+        os.mkdir(os.path.join(output_dir, name, 'cmp'))
     cmvn = np.load(os.path.join(output_dir, "train_cmvn.npz"))
     config_file = open(config_dir + ".lst")
     for line in config_file:
         if name != 'test':
             utt_id, inputs_path, labels_path = line.strip().split()
-            inputs_outdir = os.path.join(output_dir, name, f'{utt_id}')
-            labels_outdir = os.path.join(output_dir, name, f'{utt_id}')
+            inputs_outdir = os.path.join(output_dir, name, 'label', f'{utt_id}')
+            labels_outdir = os.path.join(output_dir, name, 'cmp', f'{utt_id}')
         else:
             utt_id, inputs_path = line.strip().split()
-            inputs_outdir = os.path.join(output_dir, name, f'{utt_id}')
+            inputs_outdir = os.path.join(output_dir, name, 'label', f'{utt_id}')
 
         logger.info(f'Writing utterance {utt_id} ...')
         inputs = read_binary_file(inputs_path, hparams['in_channels']).astype(np.float64)

@@ -16,7 +16,7 @@
   "acoustic_convolutional_bank_widths": [5, 10, 15, 20, 25, 30, 35, 40],
   "acoustic_max_pooling_width": 10,
   "acoustic_highway_layers": 2,
-  "acoustic_gru_layer": 2
+  "acoustic_gru_layer": 2,
   "acoustic_input_padded": 0,
   "acoustic_target_padded": 0,
   "spec_hidden_size": 128,

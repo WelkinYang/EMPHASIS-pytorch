@@ -6,6 +6,7 @@ import logging
 import numpy as np
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 with open('./hparams.json', 'r') as f:

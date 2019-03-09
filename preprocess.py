@@ -82,11 +82,11 @@ def create_scp(args):
     label_files = os.listdir(args.label_dir)
     cmp_files = os.listdir(args.cmp_dir)
 
-    label_scp = os.mkdir(os.path.join(label_dir, 'label_scp'))
-    param_scp = os.mkdir(os.path.join(cmp_dir, 'param_scp'))
+    os.mkdir(os.path.join(label_dir, 'label_scp'))
+    os.mkdir(os.path.join(cmp_dir, 'param_scp'))
 
-    label_all_scp = open(os.path.join(label_scp, 'all.scp'), 'w')
-    param_all_scp = open(os.path.join(param_scp, 'all.scp'), 'w')
+    label_all_scp = open(os.path.join(os.path.join(label_dir, 'label_scp'), 'all.scp'), 'w')
+    param_all_scp = open(os.path.join(os.path.join(cmp_dir, 'param_scp'), 'all.scp'), 'w')
 
     for label_filename in label_files:
         label_file_path = os.path.join(label_dir, label_filename)
@@ -99,6 +99,10 @@ def create_scp(args):
 def read_data(args):
     label_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_label')
     cmp_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_cmp')
+
+    if os.listdir(label_dir) is not None and os.listdir(cmp_dir) is not None:
+        print("Data has been prepared")
+        return
 
     if not os.path.exists(label_dir):
         os.mkdir(label_dir)

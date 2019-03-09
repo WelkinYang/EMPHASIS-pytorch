@@ -67,6 +67,9 @@ def calculate_cmvn(name, config_dir, output_dir):
     stddev_labels = np.sqrt(ex2_labels / labels_frame_count - mean_labels**2)
     stddev_labels[stddev_labels < 1e-20] = 1e-20
 
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+
     cmvn_name = os.path.join(output_dir, name + "_cmvn.npz")
     np.savez(cmvn_name,
              mean_inputs=mean_inputs,
@@ -78,10 +81,8 @@ def calculate_cmvn(name, config_dir, output_dir):
 
 
 def convert_to(name, config_dir, output_dir, apply_cmvn=True):
-    if os.path.exists(output_dir):
+    if not os.path.exists(output_dir):
         os.mkdir(output_dir)
-    if os.path.exists(config_dir):
-        os.mkdir(config_dir)
     cmvn = np.load(os.path.join(output_dir, "train_cmvn.npz"))
     config_file = open(os.path.join(config_dir, name + ".lst"))
     for line in config_file:

@@ -157,9 +157,9 @@ def main():
     get_random_scp()
     #cal cmvn to the data
     calculate_cmvn('train', lst_dir, data_dir)
-    convert_to('train', os.path.join(data_dir, 'train'))
-    convert_to('valid', os.path.join(data_dir, 'valid'))
-    convert_to('test', os.path.join(data_dir, 'test'))
+    convert_to('train', os.path.join(lst_dir, 'train'), data_dir)
+    convert_to('valid', os.path.join(lst_dir, 'valid'), data_dir)
+    convert_to('test', os.path.join(lst_dir, 'test'), data_dir)
 
 if __name__ == '__main__':
     main()

@@ -74,6 +74,11 @@ def create_scp(args):
     label_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_label')
     cmp_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_cmp')
 
+    if not os.path.exists(label_dir):
+        os.mkdir(label_dir)
+    if not os.path.exists(cmp_dir):
+        os.mkdir(cmp_dir)
+
     label_files = os.listdir(args.label_dir)
     cmp_files = os.listdir(args.cmp_dir)
 
@@ -98,10 +103,10 @@ def create_scp(args):
 
         write_binary_file(
             label_mat,
-            os.path.join('prepared_label', filename + '.lab'))
+            os.path.join(label_dir, filename + '.lab'))
         write_binary_file(
             cmp_mat,
-            os.path.join('prepared_cmp', filename + 'cmp'))
+            os.path.join(cmp_dir, filename + 'cmp'))
 
     label_scp = os.mkdir(os.path.join(label_dir, 'label_scp'))
     param_scp = os.mkdir(os.path.join(cmp_dir, 'param_scp'))

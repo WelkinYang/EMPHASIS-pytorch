@@ -132,12 +132,12 @@ def eval_one_duration_epoch(valid_loader, model, device):
 
 def train_model(args, model_type, model, optimizer, lr_scheduler, exp_name, device, epoch, checkpoint_path):
     data_path = os.path.join(args.base_dir, args.data)
-    train_dataset = EMPHASISDataset(f'{data_path}train')
+    train_dataset = EMPHASISDataset(f'{data_path}/train', f'./config/train.lst')
     train_sampler = RandomSampler(train_dataset)
     train_loader = DataLoader(dataset=train_dataset, batch_size=hparams['batch_size'], sampler=train_sampler,
                         num_workers=6, collate_fn=collate_fn, pin_memory=True)
 
-    valid_dataset = EMPHASISDataset(f'{data_path}vaild')
+    valid_dataset = EMPHASISDataset(f'{data_path}/vaild', f'./config/valid.lst')
     valid_sampler = SequentialSampler(valid_dataset)
     valid_loader = DataLoader(dataset=valid_dataset, batch_size=len(valid_dataset), sampler=valid_sampler,
                               num_workers=6, collate_fn=collate_fn, pin_memory=True)
@@ -199,8 +199,7 @@ def main():
     model_type = hparams['model_type']
     exp_name = args.name
     model = create_train_model(model_type)
-    os.environ["CUDA_VISIBEL_DEVICES"] = hparams['gpu_ids']
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device('cuda:' + hparams['gpu_ids'] if torch.cuda.is_available() else "cpu")
 
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)

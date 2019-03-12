@@ -61,11 +61,11 @@ def calculate_cmvn(name, config_dir, output_dir):
 
     mean_inputs = ex_inputs / inputs_frame_count
     stddev_inputs = np.sqrt(ex2_inputs / inputs_frame_count - mean_inputs**2)
-    stddev_inputs[stddev_inputs < 1e-20] = 1e-20
+    stddev_inputs[stddev_inputs < 1e-20] = 1
 
     mean_labels = ex_labels / labels_frame_count
     stddev_labels = np.sqrt(ex2_labels / labels_frame_count - mean_labels**2)
-    stddev_labels[stddev_labels < 1e-20] = 1e-20
+    stddev_labels[stddev_labels < 1e-20] = 1
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -127,7 +127,7 @@ def read_binary_file(filename, dimension=None):
         rows = struct.unpack('<i', read_buffer.read(4))[0]
         cols = struct.unpack('<i', read_buffer.read(4))[0]
 
-        tmp_mat = np.frombuffer(read_buffer.read(rows * cols * 4), dtype=np.float32)
+        tmp_mat = np.frombuffer(read_buffer.read(rows * cols * 4), dtype=np.float64)
         mat = np.reshape(tmp_mat, (rows, cols))
 
         read_buffer.close()
@@ -135,7 +135,7 @@ def read_binary_file(filename, dimension=None):
         return mat
     else:
         fid_lab = open(filename, 'rb')
-        features = np.fromfile(fid_lab, dtype=np.float32)
+        features = np.fromfile(fid_lab, dtype=np.float64)
         fid_lab.close()
         assert features.size % float(dimension) == 0.0,'specified dimension %s not compatible with data'%(dimension)
         features = features[:(dimension * (features.size // dimension))]
@@ -145,7 +145,7 @@ def read_binary_file(filename, dimension=None):
 
 
 def write_binary_file(data, output_file_name, with_dim=False):
-    data = np.asarray(data, np.float32)
+    data = np.asarray(data, np.float64)
     fid = open(output_file_name, 'wb')
     if with_dim:
         fid.write(struct.pack('<i', data.shape[0]))

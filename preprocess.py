@@ -109,10 +109,6 @@ def read_data(args):
     label_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_label')
     cmp_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_cmp')
 
-    if os.listdir(label_dir) is not None and os.listdir(cmp_dir) is not None:
-        print("Data has been prepared")
-        return
-
     if not os.path.exists(label_dir):
         os.mkdir(label_dir)
     if not os.path.exists(cmp_dir):

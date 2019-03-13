@@ -60,11 +60,11 @@ def calculate_cmvn(name, config_dir, output_dir):
         labels_frame_count += len(labels)
 
     mean_inputs = ex_inputs / inputs_frame_count
-    stddev_inputs = np.sqrt(ex2_inputs / inputs_frame_count - mean_inputs**2)
+    stddev_inputs = np.sqrt(np.abs(ex2_inputs / inputs_frame_count - mean_inputs**2))
     stddev_inputs[stddev_inputs < 1e-20] = 1e-20
 
     mean_labels = ex_labels / labels_frame_count
-    stddev_labels = np.sqrt(ex2_labels / labels_frame_count - mean_labels**2)
+    stddev_labels = np.sqrt(np.abs(ex2_labels / labels_frame_count - mean_labels**2))
     stddev_labels[stddev_labels < 1e-20] = 1e-20
 
     if not os.path.exists(output_dir):

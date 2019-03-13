@@ -126,8 +126,7 @@ def read_data(args):
         label_mat = np.loadtxt(os.path.join(args.label_dir, filename + '.lab'))
         cmp_mat = read_binary_file(
             os.path.join(args.cmp_dir, filename + ".cmp"),
-            dimension=hparams['target_channels']
-        )
+            dimension=hparams['target_channels'], dtype=np.float64)
 
         if label_mat.shape[0] <= cmp_mat.shape[0]:
             cmp_mat = cmp_mat[:label_mat.shape[0], :]
@@ -141,7 +140,7 @@ def read_data(args):
             os.path.join(label_dir, filename + '.lab'))
         write_binary_file(
             cmp_mat,
-            os.path.join(cmp_dir, filename + '.cmp'))
+            os.path.join(cmp_dir, filename + '.cmp'), dtype=np.float64)
 
 def main():
     parser = argparse.ArgumentParser()

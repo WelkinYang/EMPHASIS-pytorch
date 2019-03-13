@@ -45,7 +45,7 @@ def calculate_cmvn(name, config_dir, output_dir):
         utt_id, inputs_path, labels_path = line.strip().split()
         logger.info("Reading utterance %s" % utt_id)
         inputs = read_binary_file(inputs_path, hparams['in_channels'])
-        labels = read_binary_file(labels_path, hparams['target_channels'])
+        labels = read_binary_file(labels_path, hparams['target_channels'], dtype=np.float64)
         if inputs_frame_count == 0:    # create numpy array for accumulating
             ex_inputs = np.sum(inputs, axis=0)
             ex2_inputs = np.sum(inputs**2, axis=0)
@@ -101,9 +101,9 @@ def convert_to(name, config_dir, output_dir, apply_cmvn=True):
             inputs_outdir = os.path.join(output_dir, name, 'label', f'{utt_id}')
 
         logger.info(f'Writing utterance {utt_id} ...')
-        inputs = read_binary_file(inputs_path, hparams['in_channels']).astype(np.float64)
+        inputs = read_binary_file(inputs_path, hparams['in_channels']).astype(np.float32)
         if name != 'test':
-            labels = read_binary_file(labels_path, hparams['target_channels']).astype(np.float64)
+            labels = read_binary_file(labels_path, hparams['target_channels'], dtype=np.float64).astype(np.float64)
         else:
             labels = None
         if apply_cmvn:
@@ -115,7 +115,7 @@ def convert_to(name, config_dir, output_dir, apply_cmvn=True):
 
     config_file.close()
 
-def read_binary_file(filename, dimension=None):
+def read_binary_file(filename, dtype=np.float32, dimension=None):
     """Read data from matlab binary file (row, col and matrix).
     Returns:
         A numpy matrix containing data of the given binary file.
@@ -127,7 +127,7 @@ def read_binary_file(filename, dimension=None):
         rows = struct.unpack('<i', read_buffer.read(4))[0]
         cols = struct.unpack('<i', read_buffer.read(4))[0]
 
-        tmp_mat = np.frombuffer(read_buffer.read(rows * cols * 4), dtype=np.float64)
+        tmp_mat = np.frombuffer(read_buffer.read(rows * cols * 4), dtype=dtype)
         mat = np.reshape(tmp_mat, (rows, cols))
 
         read_buffer.close()
@@ -135,7 +135,7 @@ def read_binary_file(filename, dimension=None):
         return mat
     else:
         fid_lab = open(filename, 'rb')
-        features = np.fromfile(fid_lab, dtype=np.float64)
+        features = np.fromfile(fid_lab, dtype=dtype)
         fid_lab.close()
         assert features.size % float(dimension) == 0.0,'specified dimension %s not compatible with data'%(dimension)
         features = features[:(dimension * (features.size // dimension))]
@@ -144,8 +144,8 @@ def read_binary_file(filename, dimension=None):
         return features
 
 
-def write_binary_file(data, output_file_name, with_dim=False):
-    data = np.asarray(data, np.float64)
+def write_binary_file(data, output_file_name, dtype=np.float32, with_dim=False):
+    data = np.asarray(data, dtype=dtype)
     fid = open(output_file_name, 'wb')
     if with_dim:
         fid.write(struct.pack('<i', data.shape[0]))

@@ -11,7 +11,6 @@
   "duration_target_channels": 1,
   "duration_input_padded": 0,
   "duration_target_padded": 0,
-  "acoustic_in_channels": 128,
   "acoustic_units": 256,
   "acoustic_convolutional_bank_widths": [5, 10, 15, 20, 25, 30, 35, 40],
   "acoustic_max_pooling_width": 10,

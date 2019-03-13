@@ -31,13 +31,13 @@ def train_one_acoustic_epoch(train_loader, model, device, optimizer):
             pbar):
         input = input_batch.to(device=device)
         target = target_batch.to(device=device)
-        target = torch.cat(target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
-                           target[:, :, -(hparams['energy'] + hparams['bap']):])
+        target = torch.cat([target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                           target[:, :, -(hparams['energy_units'] + hparams['bap_units']):]], -1)
         uv_target = target[:, :, -1]
 
         output = model(input)
-        output = torch.cat(output[:, :, :hparams['spec_units'] + hparams['lf0_units']],
-                           output[:, :, -(hparams['energy'] + hparams['bap']):])
+        output = torch.cat([output[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                           output[:, :, -(hparams['energy_units'] + hparams['bap_units']):]], -1)
         uv_output = output[:, :, hparams['spec_units'] + hparams['lf0_units']]
         # mask the loss
         output *= mask
@@ -65,13 +65,13 @@ def eval_one_acoustic_epoch(valid_loader, model, device):
         input = input_batch.to(device=device)
 
         target = target_batch.to(device=device)
-        target = torch.cat(target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
-                           target[:, :, -(hparams['energy'] + hparams['bap']):])
+        target = torch.cat([target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                           target[:, :, -(hparams['energy_units'] + hparams['bap_units']):]], -1)
         uv_target = target[:, :, -1]
 
         output = model(input)
-        output = torch.cat(output[:, :, :hparams['spec_units'] + hparams['lf0_units']],
-                           output[:, :, -(hparams['energy'] + hparams['bap']):])
+        output = torch.cat([output[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                           output[:, :, -(hparams['energy_units'] + hparams['bap_units']):]], -1)
         uv_output = output[:, :, hparams['spec_units'] + hparams['lf0_units']]
 
         # mask the loss
@@ -135,12 +135,12 @@ def train_model(args, model_type, model, optimizer, lr_scheduler, exp_name, devi
     train_dataset = EMPHASISDataset(f'{data_path}/train', f'./config/train.lst')
     train_sampler = RandomSampler(train_dataset)
     train_loader = DataLoader(dataset=train_dataset, batch_size=hparams['batch_size'], sampler=train_sampler,
-                        num_workers=6, collate_fn=collate_fn, pin_memory=True)
+                        num_workers=6, collate_fn=collate_fn, pin_memory=False)
 
     valid_dataset = EMPHASISDataset(f'{data_path}/vaild', f'./config/valid.lst')
     valid_sampler = SequentialSampler(valid_dataset)
     valid_loader = DataLoader(dataset=valid_dataset, batch_size=len(valid_dataset), sampler=valid_sampler,
-                              num_workers=6, collate_fn=collate_fn, pin_memory=True)
+                              num_workers=6, collate_fn=collate_fn, pin_memory=False)
 
     for cur_epoch in tqdm(range(epoch, hparams[f'max_{model_type}_epochs'])):
         # train one epoch

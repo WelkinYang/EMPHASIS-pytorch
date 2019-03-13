@@ -26,6 +26,7 @@ class EMPHASISDataset(Dataset):
         id = self.meta_data.iloc[index]['id']
         input = read_binary_file(f'{self.path}/label/{id}.lab', dimension=hparams['in_channels'])
         target = read_binary_file(f'{self.path}/cmp/{id}.cmp', dimension=hparams['target_channels'])
+        return input, target
 
     def __len__(self):
         return len(self.meta_data)
@@ -42,14 +43,14 @@ def collate_fn(batch):
 
     mask = np.stack(_pad_mask(input_len, max_input_len) for input_len in input_lens)
     input_batch = np.stack(_pad_input(input, max_input_len) for input in inputs)
-    target_batch = np.stack(_pad_target(input, max_target_len) for target in targets)
+    target_batch = np.stack(_pad_target(target, max_target_len) for target in targets)
     return torch.FloatTensor(input_batch), torch.FloatTensor(target_batch), torch.IntTensor(mask)
 
 def _pad_mask(len, max_len):
     return np.concatenate([np.ones(len), np.zeros(max_len-len)], axis=0)
 
 def _pad_input(input, max_input_len):
-    padded = np.zeros(max_input_len - len(input), hparams['acoustic_in_channels']) + hparams['acoustic_input_padded']
+    padded = np.zeros(max_input_len - len(input), hparams['in_channels']) + hparams['acoustic_input_padded']
     return np.concatenate([input, padded], axis=0)
 
 def _pad_target(target, max_target_len):

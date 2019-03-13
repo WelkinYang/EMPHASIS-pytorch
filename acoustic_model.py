@@ -35,13 +35,13 @@ class EMPHASISAcousticModel(nn.Module):
         self.lf0_gru = nn.GRU(input_size=units, hidden_size=lf0_hidden_size, num_layers=gru_layer,
                               batch_first=True, bidirectional=True)
 
-        self.spec_linear = nn.Linear(units, hparams['spec_units'])
+        self.spec_linear = nn.Linear(spec_hidden_size * 2, hparams['spec_units'])
 
-        self.cap_linear = nn.Linear(units, hparams['cap_units'])
+        self.cap_linear = nn.Linear(cap_hidden_size * 2, hparams['cap_units'])
 
-        self.lf0_linear = nn.Linear(units, hparams['lf0_units'])
+        self.lf0_linear = nn.Linear(lf0_hidden_size * 2, hparams['lf0_units'])
 
-        self.energy_linear = nn.Linear(units, hparams['energy_units'])
+        self.energy_linear = nn.Linear(energy_hidden_size * 2, hparams['energy_units'])
 
         self.uv_linear = nn.Linear(units, hparams['uv_units'])
 

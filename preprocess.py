@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 import argparse
 import json
 import random
@@ -148,6 +149,9 @@ def main():
     parser.add_argument('--cmp_dir', type=str)
     args = parser.parse_args()
 
+    logging.basicConfig(format='%(asctime)s %(filename)s %(levelname)s %(message)s',
+                        datefmt='%a, %d %b %Y %H:%M:%S', level=logging.INFO,
+                        stream=sys.stdout)
     read_data(args)
     create_scp(args)
     get_random_scp()

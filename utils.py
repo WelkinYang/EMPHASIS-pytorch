@@ -61,11 +61,11 @@ def calculate_cmvn(name, config_dir, output_dir):
 
     mean_inputs = ex_inputs / inputs_frame_count
     stddev_inputs = np.sqrt(ex2_inputs / inputs_frame_count - mean_inputs**2)
-    stddev_inputs[stddev_inputs < 1e-20] = 1
+    stddev_inputs[stddev_inputs < 1e-20] = 1e-20
 
     mean_labels = ex_labels / labels_frame_count
     stddev_labels = np.sqrt(ex2_labels / labels_frame_count - mean_labels**2)
-    stddev_labels[stddev_labels < 1e-20] = 1
+    stddev_labels[stddev_labels < 1e-20] = 1e-20
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -115,7 +115,7 @@ def convert_to(name, config_dir, output_dir, apply_cmvn=True):
 
     config_file.close()
 
-def read_binary_file(filename, dtype=np.float32, dimension=None):
+def read_binary_file(filename, dimension=None, dtype=np.float32):
     """Read data from matlab binary file (row, col and matrix).
     Returns:
         A numpy matrix containing data of the given binary file.

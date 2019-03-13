@@ -28,7 +28,7 @@
   "energy_units": 1,
   "cap_units": 513,
   "lf0_units": 1,
-  "uv_units": 1,
+  "uv_units": 2,
   "batch_size": 32,
   "dropout_rate": 0.5,
   "initial_lr": 1e-3,

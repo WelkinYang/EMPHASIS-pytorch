@@ -11,12 +11,19 @@ with open('./hparams.json', 'r') as f:
 class EMPHASISDurationModel(nn.Module):
     def __init__(self, in_channels, units, bank_widths, max_pooling_width, highway_layers, gru_layer, duration_hidden_size, activation=[nn.ReLU(), nn.Sigmoid()]):
         super(EMPHASISDurationModel, self).__init__()
-        self.convs_bank = [nn.Conv1d(in_channels=in_channels, out_channels=units, kernel_size=k, stride=1, dilation=0 if k%2 == 1 else 2,
-                                     padding=(k-1)/2 if k%2 == 1 else k-1)
-                           for k in bank_widths]
+        self.bank_widths = bank_widths
 
-        self.max_pool = nn.MaxPool1d(kernel_size=max_pooling_width, stride=1, dilation=0 if max_pooling_width%2 == 1 else 2,
-                                     padding=(max_pooling_width-1)/2 if max_pooling_width%2 == 1 else max_pooling_width-1)
+        self.phoneme_convs_bank = [
+            nn.Conv1d(in_channels=hparams['phoneme_in_channels'], out_channels=units, kernel_size=k).cuda()
+            for k in bank_widths]
+
+        self.emotional_prosodic_convs_bank = [
+            nn.Conv1d(in_channels=hparams['emotional_prosodic_in_channels'], out_channels=units, kernel_size=k).cuda()
+            for k in bank_widths]
+
+        self.max_pool_width = max_pooling_width
+
+        self.max_pool = nn.MaxPool1d(kernel_size=max_pooling_width, stride=1)
 
         self.conv_projection = nn.Conv1d(in_channels=units*len(bank_widths), out_channels=units, kernel_size=3, stride=1, padding=1)
 

@@ -14,24 +14,40 @@ with open('./hparams.json', 'r') as f:
 
 logger = logging.getLogger(__name__)
 
-def Conv1d(inputs, conv, is_training, batch_norm=None, activation=None):
+def pad(inputs, padding):
+    return F.pad(inputs, (padding // 2, padding // 2 if padding % 2 == 0 else int(padding / 2 + 1)))
+
+
+def Conv1d(inputs, conv, is_training, batch_norm=None, activation=None, padding=None):
     # the Conv1d of pytroch chanages the channels at the 1 dim
     # [batch_size, max_time, feature_dims] -> [batch_size, feature_dims, max_time]
     inputs = torch.transpose(inputs, 1, 2)
+    if padding is not None:
+        inputs = pad(inputs, padding)
+
     conv1d_output = conv(inputs)
     if batch_norm is not None:
         batch_norm_output = batch_norm(conv1d_output)
-        batch_norm_output = torch.transpose(batch_norm_output, 1 ,2)
+        batch_norm_output = torch.transpose(batch_norm_output, 1, 2)
     else:
         batch_norm_output = torch.transpose(conv1d_output, 1, 2)
     if activation is not None:
         batch_norm_output = activation(batch_norm_output)
     return F.dropout(batch_norm_output, p=hparams["dropout_rate"], training=is_training)
 
+
+def MaxPool1d(inputs, maxpool, padding=None):
+    if padding is not None:
+        inputs = pad(inputs, padding)
+    outputs = maxpool(inputs)
+    return outputs
+
+
 def highwaynet(inputs, activation, units=128):
-    H = F.linear(inputs, weight=torch.nn.init.normal_(torch.empty(units, inputs.size(2))))
+    H = F.linear(inputs, weight=torch.nn.init.normal_(torch.empty(units, inputs.size(2))).cuda())
     H = activation[0](H)
-    T = F.linear(inputs, weight=torch.nn.init.normal_(torch.empty(units, inputs.size(2))), bias=nn.init.constant_(torch.empty(1, 1, units), -0.1))
+    T = F.linear(inputs, weight=torch.nn.init.normal_(torch.empty(units, inputs.size(2)).cuda()),
+                 bias=nn.init.constant_(torch.empty(1, 1, units), -0.1).cuda())
     T = activation[1](T)
     return H * T + inputs * (1.0 - T)
 

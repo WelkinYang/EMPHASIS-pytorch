@@ -21,29 +21,35 @@ with open('./hparams.json', 'r') as f:
 
 logger = logging.getLogger(__name__)
 
+
 def train_one_acoustic_epoch(train_loader, model, device, optimizer):
     model.train()
     tr_loss = 0.0
     num_steps = 0
 
     pbar = tqdm(train_loader, total=(len(train_loader)), unit=' batches')
-    for b, (input_batch, target_batch,  mask) in enumerate(
+    for b, (input_batch, target_batch, mask, uv_mask) in enumerate(
             pbar):
         input = input_batch.to(device=device)
         target = target_batch.to(device=device)
-        target = torch.cat([target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
-                           target[:, :, -(hparams['energy_units'] + hparams['bap_units']):]], -1)
+        mask = mask.to(device=device)
+        uv_mask = uv_mask.to(device=device)
+        target = torch.cat((target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                            target[:, :, -(hparams['energy_units'] + hparams['cap_units']):]), -1)
         uv_target = target[:, :, -1]
+        uv_target[uv_target > 0.5] = 1
+        uv_target = uv_target.long()
 
-        output = model(input)
-        output = torch.cat([output[:, :, :hparams['spec_units'] + hparams['lf0_units']],
-                           output[:, :, -(hparams['energy_units'] + hparams['bap_units']):]], -1)
-        uv_output = output[:, :, hparams['spec_units'] + hparams['lf0_units']]
+        output, uv_output = model(input)
+
         # mask the loss
         output *= mask
-        uv_output *= mask
+        uv_output *= uv_mask
+
         output_loss = F.mse_loss(output, target)
-        uv_output_loss = F.cross_entropy(uv_output, uv_target)
+        uv_output = uv_output.view(-1, 2)
+        uv_target = uv_target.view(-1, 1)
+        uv_output_loss = F.cross_entropy(uv_output, uv_target.squeeze())
         loss = output_loss + uv_output_loss
         tr_loss += loss
 
@@ -60,7 +66,7 @@ def eval_one_acoustic_epoch(valid_loader, model, device):
     num_steps = 0
 
     pbar = tqdm(valid_loader, total=(len(valid_loader)), unit=' batches')
-    for b, (input_batch, target_batch, mask) in enumerate(
+    for b, (input_batch, target_batch, mask, uv_mask) in enumerate(
             pbar):
         input = input_batch.to(device=device)
 
@@ -69,14 +75,16 @@ def eval_one_acoustic_epoch(valid_loader, model, device):
                            target[:, :, -(hparams['energy_units'] + hparams['bap_units']):]], -1)
         uv_target = target[:, :, -1]
 
-        output = model(input)
-        output = torch.cat([output[:, :, :hparams['spec_units'] + hparams['lf0_units']],
-                           output[:, :, -(hparams['energy_units'] + hparams['bap_units']):]], -1)
-        uv_output = output[:, :, hparams['spec_units'] + hparams['lf0_units']]
+        output, uv_output = model(input)
 
         # mask the loss
         output *= mask
+        uv_output *= uv_mask
+
         output_loss = F.mse_loss(output, target)
+
+        uv_output = uv_output.view(-1, 2)
+        uv_target = uv_target.view(-1, 1)
         uv_output_loss = F.cross_entropy(uv_output, uv_target)
         loss = output_loss + uv_output_loss
         val_loss += loss
@@ -115,7 +123,7 @@ def eval_one_duration_epoch(valid_loader, model, device):
     num_steps = 0
 
     pbar = tqdm(valid_loader, total=(len(valid_loader)), unit=' batches')
-    for b, (input_batch,  target_batch, mask) in enumerate(
+    for b, (input_batch, target_batch, mask) in enumerate(
             pbar):
         input = input_batch.to(device=device)
         target = target_batch.to(device=device)

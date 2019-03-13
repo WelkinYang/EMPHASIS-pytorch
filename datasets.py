@@ -42,16 +42,20 @@ def collate_fn(batch):
     max_target_len = max(target_lens)
 
     mask = np.stack(_pad_mask(input_len, max_input_len) for input_len in input_lens)
+    uv_mask = np.stack(_pad_uv_mask(input_len, max_input_len) for input_len in input_lens)
     input_batch = np.stack(_pad_input(input, max_input_len) for input in inputs)
     target_batch = np.stack(_pad_target(target, max_target_len) for target in targets)
-    return torch.FloatTensor(input_batch), torch.FloatTensor(target_batch), torch.IntTensor(mask)
+    return torch.FloatTensor(input_batch), torch.FloatTensor(target_batch), torch.FloatTensor(mask), torch.FloatTensor(uv_mask)
 
 def _pad_mask(len, max_len):
-    return np.concatenate([np.ones(len), np.zeros(max_len-len)], axis=0)
+    return np.concatenate([np.ones((len, hparams['target_channels']-1)), np.zeros((max_len-len, hparams['target_channels']-1))], axis=0)
+
+def _pad_uv_mask(len, max_len):
+    return np.concatenate([np.ones((len, hparams['uv_units'])), np.zeros((max_len-len, hparams['uv_units']))], axis=0)
 
 def _pad_input(input, max_input_len):
-    padded = np.zeros(max_input_len - len(input), hparams['in_channels']) + hparams['acoustic_input_padded']
-    return np.concatenate([input, padded], axis=0)
+    padded = np.zeros((max_input_len - len(input), hparams['in_channels'])) + hparams['acoustic_input_padded']
+    return np.concatenate([input, padded], axis=0).astype(np.float32)
 
 def _pad_target(target, max_target_len):
     if hparams['model_type'] == 'acoustic':

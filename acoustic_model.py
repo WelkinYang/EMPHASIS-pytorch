@@ -2,8 +2,7 @@ import json
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from utils import Conv1d, MaxPool1d, highwaynet
+from utils import Conv1d, MaxPool1d, HighwayNet
 
 with open('./hparams.json', 'r') as f:
     hparams = json.load(f)
@@ -17,13 +16,13 @@ class EMPHASISAcousticModel(nn.Module):
 
         self.bank_widths = bank_widths
 
-        self.phoneme_convs_bank = [
-            nn.Conv1d(in_channels=hparams['phoneme_in_channels'], out_channels=units, kernel_size=k).cuda()
-            for k in bank_widths]
+        self.phoneme_convs_bank = nn.ModuleList([
+            nn.Conv1d(in_channels=hparams['phoneme_in_channels'], out_channels=units, kernel_size=k)
+            for k in bank_widths])
 
-        self.emotional_prosodic_convs_bank = [
-            nn.Conv1d(in_channels=hparams['emotional_prosodic_in_channels'], out_channels=units, kernel_size=k).cuda()
-            for k in bank_widths]
+        self.emotional_prosodic_convs_bank = nn.ModuleList([
+            nn.Conv1d(in_channels=hparams['emotional_prosodic_in_channels'], out_channels=units, kernel_size=k)
+            for k in bank_widths])
 
         self.max_pool_width = max_pooling_width
 
@@ -32,7 +31,13 @@ class EMPHASISAcousticModel(nn.Module):
         self.conv_projection = nn.Conv1d(in_channels=units * len(bank_widths), out_channels=units, kernel_size=3,
                                          stride=1, padding=1)
 
+        self.highway_net = HighwayNet(activation=activation)
+
         self.duration_highway_layers = duration_highway_layers
+
+        self.batch_norm = nn.BatchNorm1d(self.conv_projection.out_channels)
+
+        self.highway_linear = nn.Linear(self.conv_projection.out_channels * 2, 128)
 
         self.spec_gru = nn.GRU(input_size=units, hidden_size=spec_hidden_size, num_layers=gru_layer,
                                batch_first=True, bidirectional=True)
@@ -79,26 +84,30 @@ class EMPHASISAcousticModel(nn.Module):
 
         # Projection layer:
         phoneme_proj_output = Conv1d(phoneme_maxpool_output, self.conv_projection, self.training,
-                                     nn.BatchNorm1d(self.conv_projection.out_channels).cuda(),
+                                     self.batch_norm,
                                      activation=self.activation[0])
         emotional_prosodic_proj_output = Conv1d(emotional_prosodic_maxpool_outputs, self.conv_projection, self.training,
-                                                nn.BatchNorm1d(self.conv_projection.out_channels).cuda(),
+                                                self.batch_norm,
                                                 activation=self.activation[0])
 
         highway_input = torch.cat([phoneme_proj_output, emotional_prosodic_proj_output], dim=-1)
 
         # Handle dimensionality mismatch
         if highway_input.shape[2] != 128:
-            highway_input = F.linear(highway_input,
-                                     weight=torch.nn.init.normal_(
-                                         torch.empty(128, self.conv_projection.out_channels * 2)).cuda())
+            highway_input = self.highway_linear(highway_input)
 
         # HighwayNet:
         for i in range(self.duration_highway_layers):
-            highway_input = highwaynet(highway_input, self.activation)
+            highway_input = self.highway_net(highway_input)
         rnn_input = highway_input
 
         # Bidirectional RNN
+        # Flatten parameters
+        self.spec_gru.flatten_parameters()
+        self.energy_gru.flatten_parameters()
+        self.cap_gru.flatten_parameters()
+        self.lf0_gru.flatten_parameters()
+
         spec_rnn_output, _ = self.spec_gru(rnn_input)
         energy_rnn_output, _ = self.energy_gru(rnn_input)
         cap_rnn_output, _ = self.cap_gru(rnn_input)

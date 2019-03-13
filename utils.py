@@ -51,6 +51,26 @@ def highwaynet(inputs, activation, units=128):
     T = activation[1](T)
     return H * T + inputs * (1.0 - T)
 
+class HighwayNet(nn.Module):
+    def __init__(self, activation=None, units=128):
+        super(HighwayNet, self).__init__()
+
+        self.activation = activation
+        self.H = nn.Linear(units, units)
+        self.T = nn.Linear(units, units)
+        torch.nn.init.constant_(self.T.bias, val=-1.0)
+
+    def forward(self, input):
+        H_output = self.H(input)
+        if self.activation[0] is not None:
+            H_output = self.activation[0](H_output)
+
+        T_output = self.T(H_output)
+        if self.activation[1] is not None:
+            T_output = self.activation[1](T_output)
+
+        return H_output * T_output + input * (1.0 - T_output)
+
 def calculate_cmvn(name, config_dir, output_dir):
     """Calculate mean and var."""
     logger.info("Calculating mean and var of %s" % name)

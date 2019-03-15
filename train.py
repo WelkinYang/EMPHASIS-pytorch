@@ -166,7 +166,7 @@ def train_model(args, model_type, model, optimizer, lr_scheduler, exp_name, devi
         else:
             val_loss = eval_one_duration_epoch(valid_loader, model, device)
 
-        logger.info(f'EPOCH {cur_epoch}: TRAIN AVG.LOSS {tr_loss:.4f}, learning_rate: {lr:g}'
+        logger.info(f'EPOCH {cur_epoch}: TRAIN AVG.LOSS {tr_loss:.4f}, learning_rate: {lr:g} '
                     f'CROSSVAL AVG.LOSS {val_loss:.4f}, TIME USED {used_time:.2f}')
 
         state = {

@@ -21,15 +21,29 @@ with open('./hparams.json', 'r') as f:
 def decode(args, model, device):
     model.eval()
     data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
-    data_list = os.path.join(data_dir, 'test')
+    config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
+    data_list = open(os.path.join(config_dir, 'test.lst'), 'r').readlines()
     cmvn = np.load(os.path.join(data_dir, "train_cmvn.npz"))
+    if not os.path.exists(args.output):
+        os.mkdir(args.output)
+
     for input_name in data_list:
+        input_name = input_name.split(' ')[0] + '.lab'
         logging.info(f'decode {input_name} ...')
-        input = read_binary_file(os.path.join(data_list, input_name),
+        input = read_binary_file(os.path.join(os.path.join(data_dir, 'test', 'label'), input_name),
                          dimension=hparams['in_channels'])
-        output = model(input)
+        input = torch.from_numpy(input).to(device)
+        input = input.unsqueeze(0)
+        output, uv_output = model(input)
+        uv_output = F.softmax(uv_output)[:, :, 0]
+        uv = torch.ones(uv_output.shape).to(device)
+        uv[uv_output >= 0.5] = 0
+        uv = uv.unsqueeze(-1)
+        output = torch.cat((output[:, :, :hparams['spec_units'] + hparams['lf0_units']],
+                            uv, output[:, :, -(hparams['energy_units'] + hparams['cap_units']):]), -1)
+        output = output.cpu().squeeze().detach().numpy()
         output = output * cmvn['stddev_labels'] + cmvn["mean_labels"]
-        write_binary_file(os.path.join(args.output, os.path.splitext(input_name) + '.cmp'))
+        write_binary_file(output, os.path.join(args.output, os.path.splitext(input_name)[0] + '.cmp'), dtype=np.float64)
 
 
 def main():
@@ -46,8 +60,7 @@ def main():
     model_type = hparams['model_type']
     model = create_train_model(model_type)
 
-    os.environ["CUDA_VISIBEL_DEVICES"] = hparams['gpu_ids']
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)

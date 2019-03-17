@@ -10,18 +10,15 @@ from utils import calculate_cmvn, convert_to, read_binary_file, write_binary_fil
 with open('./hparams.json', 'r') as f:
     hparams = json.load(f)
 
-train_ratio = 0.95
-valid_ratio = 0.04
+logger = logging.getLogger(__name__)
+
+train_ratio = 0.97
+valid_ratio = 0.02
 test_ratio = 0.01
 
-raw = 'raw'
+cur_file = os.path.dirname(os.path.realpath(__file__))
 
-label_scp_dir = raw + '/prepared_label/label_scp/'
-param_scp_dir = raw + '/prepared_cmp/param_scp/'
-lst_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
-data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
-
-def get_random_scp():
+def get_random_scp(label_scp_dir, param_scp_dir, lst_dir):
     label_scp = open(label_scp_dir + 'all.scp')
     param_scp = open(param_scp_dir + 'all.scp')
 
@@ -74,9 +71,9 @@ def get_random_scp():
             param_train.write(line_param)
             lst_train.write(line_lst)
 
-def create_scp(args):
-    label_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_label')
-    cmp_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_cmp')
+def create_scp(raw):
+    label_dir = os.path.join(cur_file, raw, 'prepared_label')
+    cmp_dir = os.path.join(cur_file, raw, 'prepared_cmp')
 
     if not os.path.exists(label_dir):
         os.mkdir(label_dir)
@@ -106,9 +103,9 @@ def create_scp(args):
         param_all_scp.write(filename + " " + cmp_file_path + "\n")
 
 
-def read_data(args):
-    label_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_label')
-    cmp_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'raw', 'prepared_cmp')
+def read_data(args, raw):
+    label_dir = os.path.join(cur_file, raw, 'prepared_label')
+    cmp_dir = os.path.join(cur_file, raw, 'prepared_cmp')
 
     if not os.path.exists(label_dir):
         os.mkdir(label_dir)
@@ -121,13 +118,19 @@ def read_data(args):
     # Do frame alignment
     for line in label_files:
         filename, _ = os.path.splitext(line.strip())
-        print('processing ' + filename)
+        logger.info('processing ' + filename)
         sys.stdout.flush()
 
         label_mat = np.loadtxt(os.path.join(args.label_dir, filename + '.lab'))
-        cmp_mat = read_binary_file(
-            os.path.join(args.cmp_dir, filename + ".cmp"),
-            dimension=hparams['target_channels'], dtype=np.float64)
+        if args.model_type == 'acoustic':
+            cmp_mat = read_binary_file(
+                os.path.join(args.cmp_dir, filename + ".cmp"),
+                dimension=hparams['target_channels'], dtype=np.float64)
+        elif args.model_type == 'acoustic_mgc':
+            cmp_mat = read_binary_file(
+                os.path.join(args.cmp_dir, filename + ".cmp"),
+                dimension=hparams['mgc_target_channels'], dtype=np.float32)
+
 
         if label_mat.shape[0] <= cmp_mat.shape[0]:
             cmp_mat = cmp_mat[:label_mat.shape[0], :]
@@ -139,27 +142,42 @@ def read_data(args):
         write_binary_file(
             label_mat,
             os.path.join(label_dir, filename + '.lab'))
-        write_binary_file(
-            cmp_mat,
-            os.path.join(cmp_dir, filename + '.cmp'), dtype=np.float64)
+        if args.model_type == 'acoustic':
+            write_binary_file(
+                cmp_mat,
+                os.path.join(cmp_dir, filename + '.cmp'), dtype=np.float64)
+        elif args.model_type == 'acoustic_mgc':
+            write_binary_file(
+                cmp_mat,
+                os.path.join(cmp_dir, filename + '.cmp'), dtype=np.float32)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--label_dir', type=str)
     parser.add_argument('--cmp_dir', type=str)
+    parser.add_argument('--name', type=str)
+    parser.add_argument('--model_type', type=str)
     args = parser.parse_args()
 
     logging.basicConfig(format='%(asctime)s %(filename)s %(levelname)s %(message)s',
                         datefmt='%a, %d %b %Y %H:%M:%S', level=logging.INFO,
                         stream=sys.stdout)
-    read_data(args)
-    create_scp(args)
-    get_random_scp()
+
+    raw = 'raw_' +  args.name
+
+    label_scp_dir = raw + '/prepared_label/label_scp/'
+    param_scp_dir = raw + '/prepared_cmp/param_scp/'
+    lst_dir = os.path.join(cur_file, 'config_' + args.name)
+    data_dir = os.path.join(cur_file, 'data_' + args.name)
+
+    read_data(args, raw)
+    create_scp(raw)
+    get_random_scp(label_scp_dir, param_scp_dir, lst_dir)
     #cal cmvn to the data
-    calculate_cmvn('train', lst_dir, data_dir)
-    convert_to('train', os.path.join(lst_dir, 'train'), data_dir)
-    convert_to('valid', os.path.join(lst_dir, 'valid'), data_dir)
-    convert_to('test', os.path.join(lst_dir, 'test'), data_dir)
+    calculate_cmvn('train', lst_dir, data_dir, args.model_tpye)
+    convert_to('train', os.path.join(lst_dir, 'train'), data_dir, args.model_tpye)
+    convert_to('valid', os.path.join(lst_dir, 'valid'), data_dir, args.model_tpye)
+    convert_to('test', os.path.join(lst_dir, 'test'), data_dir, args.model_tpye)
 
 if __name__ == '__main__':
     main()

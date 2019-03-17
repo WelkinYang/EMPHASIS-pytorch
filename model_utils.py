@@ -1,5 +1,6 @@
 from acoustic_model import EMPHASISAcousticModel
 from duration_model import EMPHASISDurationModel
+from acoustic_mgc_model import EMPHASISAcousticMgcModel
 
 import json
 import logging
@@ -11,6 +12,8 @@ logger = logging.getLogger(__name__)
 def create_train_model(model_type):
     if model_type == "acoustic":
         model = build_acoustic_model()
+    elif model_type == "acoustic_mgc":
+        model = build_acoustic_mgc_model()
     elif model_type == 'duration':
         model = build_duration_model()
     else:
@@ -45,3 +48,16 @@ def build_acoustic_model():
     )
     return model
 
+def build_acoustic_mgc_model():
+    model = EMPHASISAcousticMgcModel(
+        in_channels=hparams['in_channels'],
+        units=hparams['acoustic_units'],
+        bank_widths=hparams['acoustic_convolutional_bank_widths'],
+        max_pooling_width=hparams['acoustic_max_pooling_width'],
+        duration_highway_layers=hparams['acoustic_highway_layers'],
+        gru_layer=hparams['acoustic_gru_layer'],
+        mgc_hidden_size=hparams['mgc_hidden_size'],
+        bap_hidden_size=hparams['bap_hidden_size'],
+        lf0_hidden_size=hparams['lf0_hidden_size']
+    )
+    return model

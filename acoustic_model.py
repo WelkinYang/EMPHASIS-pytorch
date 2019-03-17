@@ -9,7 +9,7 @@ with open('./hparams.json', 'r') as f:
 
 
 class EMPHASISAcousticModel(nn.Module):
-    def __init__(self, in_channels, units, bank_widths, max_pooling_width, duration_highway_layers, gru_layer,
+    def __init__(self, units, bank_widths, max_pooling_width, duration_highway_layers, gru_layer,
                  spec_hidden_size, energy_hidden_size, cap_hidden_size,
                  lf0_hidden_size, activation=[nn.ReLU(), nn.Sigmoid()]):
         super(EMPHASISAcousticModel, self).__init__()

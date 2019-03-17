@@ -71,7 +71,7 @@ class HighwayNet(nn.Module):
 
         return H_output * T_output + input * (1.0 - T_output)
 
-def calculate_cmvn(name, config_dir, output_dir):
+def calculate_cmvn(name, config_dir, output_dir, model_tpye):
     """Calculate mean and var."""
     logger.info("Calculating mean and var of %s" % name)
     config_filename = open(os.path.join(config_dir, name + '.lst'))
@@ -81,7 +81,9 @@ def calculate_cmvn(name, config_dir, output_dir):
         utt_id, inputs_path, labels_path = line.strip().split()
         logger.info("Reading utterance %s" % utt_id)
         inputs = read_binary_file(inputs_path, hparams['in_channels'])
-        labels = read_binary_file(labels_path, hparams['target_channels'], dtype=np.float64)
+        labels = read_binary_file(labels_path, hparams['target_channels'] if model_tpye == 'acoustic' else
+                                  hparams['mgc_target_channels'], dtype=np.float64 if model_tpye == 'acoustic'
+        else np.float32)
         if inputs_frame_count == 0:    # create numpy array for accumulating
             ex_inputs = np.sum(inputs, axis=0)
             ex2_inputs = np.sum(inputs**2, axis=0)
@@ -116,7 +118,7 @@ def calculate_cmvn(name, config_dir, output_dir):
     logger.info("Wrote to %s" % cmvn_name)
 
 
-def convert_to(name, config_dir, output_dir, apply_cmvn=True):
+def convert_to(name, config_dir, output_dir, model_type, apply_cmvn=True):
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
     if not os.path.exists(os.path.join(output_dir, name)):
@@ -139,7 +141,9 @@ def convert_to(name, config_dir, output_dir, apply_cmvn=True):
         logger.info(f'Writing utterance {utt_id} ...')
         inputs = read_binary_file(inputs_path, hparams['in_channels']).astype(np.float32)
         if name != 'test':
-            labels = read_binary_file(labels_path, hparams['target_channels'], dtype=np.float64).astype(np.float64)
+            labels = read_binary_file(labels_path, hparams['target_channels'] if model_type == 'acoustic' else
+                                      hparams['mgc_target_channels'], dtype=np.float64 if model_type == 'acoustic'
+            else np.float32).astype(np.float64 if model_type == 'acoustic' else np.float32)
         else:
             labels = None
         if apply_cmvn:
@@ -147,7 +151,7 @@ def convert_to(name, config_dir, output_dir, apply_cmvn=True):
             write_binary_file(inputs, inputs_outdir)
             if labels is not None:
                 labels = (labels - cmvn["mean_labels"]) / cmvn["stddev_labels"]
-                write_binary_file(labels, labels_outdir)
+                write_binary_file(labels, labels_outdir, dtype=np.float64 if model_type == 'acoustic' else np.float32)
 
     config_file.close()
 

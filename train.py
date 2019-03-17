@@ -7,7 +7,6 @@ import argparse
 from tqdm import tqdm
 from sgdr import CosineWithRestarts
 from model_utils import create_train_model
-from utils import calculate_cmvn, convert_to
 from datasets import EMPHASISDataset, collate_fn
 
 import torch
@@ -36,9 +35,9 @@ def train_one_acoustic_epoch(train_loader, model, device, optimizer):
         uv_mask = uv_mask.to(device=device)
         target = torch.cat((target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
                             target[:, :, -(hparams['energy_units'] + hparams['cap_units']):]), -1)
-        uv_target = target[:, :, -1]
+        uv_target = target[:, :, hparams['spec_units'] + hparams['lf0_units']].long()
         uv_target[uv_target > 0.5] = 1
-        uv_target = uv_target.long()
+        uv_target[uv_target <= 0.5] = 0
 
         output, uv_output = model(input)
 
@@ -74,7 +73,9 @@ def eval_one_acoustic_epoch(valid_loader, model, device):
         uv_mask = uv_mask.to(device=device)
         target = torch.cat([target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
                             target[:, :, -(hparams['energy_units'] + hparams['cap_units']):]], -1)
-        uv_target = target[:, :, -1].long()
+        uv_target = target[:, :, hparams['spec_units'] + hparams['lf0_units']].long()
+        uv_target[uv_target > 0.5] = 1
+        uv_target[uv_target <= 0.5] = 0
 
         output, uv_output = model(input)
 
@@ -92,6 +93,79 @@ def eval_one_acoustic_epoch(valid_loader, model, device):
         num_steps += 1
     return val_loss / num_steps
 
+
+def train_one_acoustic_mgc_epoch(train_loader, model, device, optimizer):
+    model.train()
+    tr_loss = 0.0
+    num_steps = 0
+
+    pbar = tqdm(train_loader, total=(len(train_loader)), unit=' batches')
+    for b, (input_batch, target_batch, mask, uv_mask) in enumerate(
+            pbar):
+        input = input_batch.to(device=device)
+        target = target_batch.to(device=device)
+        mask = mask.to(device=device)
+        uv_mask = uv_mask.to(device=device)
+        target = torch.cat((target[:, :, :hparams['mgc_units'] + hparams['lf0_units']],
+                            target[:, :, -(hparams['bap_units']):]), -1)
+        uv_target = target[:, :, -1]
+        uv_target[uv_target > 0.5] = 1
+        uv_target = uv_target.long()
+
+        output, uv_output = model(input)
+
+        # mask the loss
+        output *= mask
+        uv_output *= uv_mask
+
+        output_loss = F.mse_loss(output, target)
+        uv_output = uv_output.view(-1, 2)
+        uv_target = uv_target.view(-1, 1)
+        uv_output_loss = F.cross_entropy(uv_output, uv_target.squeeze())
+        loss = output_loss + uv_output_loss
+        tr_loss += loss
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        num_steps += 1
+    return tr_loss / num_steps
+
+
+def eval_one_acoustic_mgc_epoch(valid_loader, model, device):
+    val_loss = 0.0
+    num_steps = 0
+
+    pbar = tqdm(valid_loader, total=(len(valid_loader)), unit=' batches')
+    for b, (input_batch, target_batch, mask, uv_mask) in enumerate(
+            pbar):
+        input = input_batch.to(device=device)
+        target = target_batch.to(device=device)
+        mask = mask.to(device=device)
+        uv_mask = uv_mask.to(device=device)
+        uv_mask = uv_mask.to(device=device)
+        target = torch.cat((target[:, :, :hparams['mgc_units'] + hparams['lf0_units']],
+                            target[:, :, -(hparams['bap_units']):]), -1)
+        uv_target = target[:, :, -1]
+        uv_target[uv_target > 0.5] = 1
+        uv_target = uv_target.long()
+
+        output, uv_output = model(input)
+
+        # mask the loss
+        output *= mask
+        uv_output *= uv_mask
+
+        output_loss = F.mse_loss(output, target)
+
+        uv_output = uv_output.view(-1, 2)
+        uv_target = uv_target.view(-1, 1)
+        uv_output_loss = F.cross_entropy(uv_output, uv_target.squeeze())
+        loss = output_loss + uv_output_loss
+        val_loss += loss.item()
+        num_steps += 1
+    return val_loss / num_steps
 
 def train_one_duration_epoch(train_loader, model, device, optimizer):
     model.train()
@@ -162,6 +236,8 @@ def train_model(args, model_type, model, optimizer, lr_scheduler, exp_name, devi
         lr = lr_scheduler.get_lr()[0]
         if model_type == 'acoustic':
             tr_loss = train_one_acoustic_epoch(train_loader, model, device, optimizer)
+        elif model_type == 'acoustic_mgc':
+            tr_loss = train_one_acoustic_mgc_epoch(train_loader, model, device, optimizer)
         else:
             tr_loss = train_one_duration_epoch(train_loader, model, device, optimizer)
         time_end = time.time()
@@ -170,6 +246,8 @@ def train_model(args, model_type, model, optimizer, lr_scheduler, exp_name, devi
         # validate one epoch
         if model_type == 'acoustic':
             val_loss = eval_one_acoustic_epoch(valid_loader, model, device)
+        elif model_type == 'acoustic_mgc':
+            val_loss = eval_one_acoustic_mgc_epoch(valid_loader, model, device)
         else:
             val_loss = eval_one_duration_epoch(valid_loader, model, device)
 
@@ -213,6 +291,8 @@ def main():
     parser.add_argument('--log_dir', default='EMPHASIS', type=str, help='path to save checkpoint')
     parser.add_argument('--restore_from', default=None, type=str,
                         help='the checkpoint such as xxx.tar restored from the log_dir you set')
+    parser.add_argument('--model_type', default='acoustic', type=str,
+                        help='model type which is either acoustic or acoustic_mgc')
     parser.add_argument('--name', default='EMPHASIS', type=str,
                         help='name of the experiment')
 
@@ -222,7 +302,7 @@ def main():
                         stream=sys.stdout)
 
     epoch = 0
-    model_type = hparams['model_type']
+    model_type = args.model_type
     exp_name = args.name
     model = create_train_model(model_type)
     device = torch.device('cuda' if torch.cuda.is_available() else "cpu")

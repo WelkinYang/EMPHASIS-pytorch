@@ -21,6 +21,7 @@ with open('./hparams.json', 'r') as f:
 
 logger = logging.getLogger(__name__)
 
+
 def train_one_acoustic_epoch(train_loader, model, device, optimizer):
     model.train()
     tr_loss = 0.0
@@ -59,6 +60,7 @@ def train_one_acoustic_epoch(train_loader, model, device, optimizer):
         num_steps += 1
     return tr_loss / num_steps
 
+
 def eval_one_acoustic_epoch(valid_loader, model, device):
     val_loss = 0.0
     num_steps = 0
@@ -71,7 +73,7 @@ def eval_one_acoustic_epoch(valid_loader, model, device):
         mask = mask.to(device=device)
         uv_mask = uv_mask.to(device=device)
         target = torch.cat([target[:, :, :hparams['spec_units'] + hparams['lf0_units']],
-                           target[:, :, -(hparams['energy_units'] + hparams['cap_units']):]], -1)
+                            target[:, :, -(hparams['energy_units'] + hparams['cap_units']):]], -1)
         uv_target = target[:, :, -1].long()
 
         output, uv_output = model(input)
@@ -89,6 +91,7 @@ def eval_one_acoustic_epoch(valid_loader, model, device):
         val_loss += loss.item()
         num_steps += 1
     return val_loss / num_steps
+
 
 def train_one_duration_epoch(train_loader, model, device, optimizer):
     model.train()
@@ -115,6 +118,7 @@ def train_one_duration_epoch(train_loader, model, device, optimizer):
         num_steps += 1
     return tr_loss / num_steps
 
+
 def eval_one_duration_epoch(valid_loader, model, device):
     model.eval()
     val_loss = 0.0
@@ -136,17 +140,20 @@ def eval_one_duration_epoch(valid_loader, model, device):
     model.train()
     return val_loss / num_steps
 
+
 def train_model(args, model_type, model, optimizer, lr_scheduler, exp_name, device, epoch, checkpoint_path):
     data_path = os.path.join(args.base_dir, args.data)
     train_dataset = EMPHASISDataset(f'{data_path}/train', f'./config/train.lst')
     train_sampler = RandomSampler(train_dataset)
     train_loader = DataLoader(dataset=train_dataset, batch_size=hparams['batch_size'], sampler=train_sampler,
-                        num_workers=6, collate_fn=collate_fn, pin_memory=False)
+                              num_workers=6, collate_fn=collate_fn, pin_memory=False)
 
     valid_dataset = EMPHASISDataset(f'{data_path}/valid', f'./config/valid.lst')
     valid_sampler = SequentialSampler(valid_dataset)
     valid_loader = DataLoader(dataset=valid_dataset, batch_size=hparams['batch_size'], sampler=valid_sampler,
                               num_workers=6, collate_fn=collate_fn, pin_memory=False)
+    prev_val_loss = 1000.0
+    prev_checkpoint_path = '.'
 
     for cur_epoch in tqdm(range(epoch, hparams[f'max_{model_type}_epochs'])):
         # train one epoch
@@ -169,20 +176,34 @@ def train_model(args, model_type, model, optimizer, lr_scheduler, exp_name, devi
         logger.info(f'EPOCH {cur_epoch}: TRAIN AVG.LOSS {tr_loss:.4f}, learning_rate: {lr:g} '
                     f'CROSSVAL AVG.LOSS {val_loss:.4f}, TIME USED {used_time:.2f}')
 
-        state = {
-            'epoch': epoch + 1,
-            'model': model.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            'lr_scheduler': lr_scheduler.state_dict()
-        }
+        if val_loss >= prev_val_loss:
+            logger.info(f'The CROSSVAL AVG.LOSS does\'nt reduce, so we need to reload the last checkpoint')
+            checkpoint = torch.load(prev_checkpoint_path)
+            epoch = checkpoint['epoch']
+            model.load_state_dict(checkpoint['model'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
 
-        torch.save(state, f'{checkpoint_path}/{exp_name}_epoch{cur_epoch}_lrate{lr:g}_tr{tr_loss:.4f}_cv{val_loss:g}.tar')
-        logger.info(
-            f'save state to {checkpoint_path}/{exp_name}_epoch{cur_epoch}_lrate{lr:g}_tr{tr_loss:.4f}_cv{val_loss:g}.tar succeed')
+            logger.info(f'Loaded checkpoint from {prev_checkpoint_path} succeed')
+        else:
+            state = {
+                'epoch': cur_epoch + 1,
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'lr_scheduler': lr_scheduler.state_dict()
+            }
+
+            torch.save(state,
+                       f'{checkpoint_path}/{exp_name}_epoch{cur_epoch}_lrate{lr:g}_tr{tr_loss:.4f}_cv{val_loss:g}.tar')
+            logger.info(
+                f'Save state to {checkpoint_path}/{exp_name}_epoch{cur_epoch}_lrate{lr:g}_tr{tr_loss:.4f}_cv{val_loss:g}.tar succeed')
+            prev_loss = val_loss
+            prev_checkponit_path = f'{checkpoint_path}/{exp_name}_epoch{cur_epoch}_lrate{lr:g}_tr{tr_loss:.4f}_cv{val_loss:g}.tar'
 
         # add a blank line for log readability
         print()
         sys.stdout.flush()
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -199,7 +220,6 @@ def main():
     logging.basicConfig(format='%(asctime)s %(filename)s %(levelname)s %(message)s',
                         datefmt='%a, %d %b %Y %H:%M:%S', level=logging.INFO,
                         stream=sys.stdout)
-
 
     epoch = 0
     model_type = hparams['model_type']
@@ -221,7 +241,7 @@ def main():
         # load the checkpoint ...
         cpkt_path = os.path.join(checkpoint_path, args.restore_from)
         if os.path.exists(cpkt_path):
-            logger.info(f'loading checkpoint from {cpkt_path} ...')
+            logger.info(f'Loading checkpoint from {cpkt_path} ...')
 
             checkpoint = torch.load(cpkt_path)
             epoch = checkpoint['epoch']
@@ -230,13 +250,13 @@ def main():
             optimizer.load_state_dict(checkpoint['optimizer'])
             lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
 
-            logger.info(f'loaded checkpoint from {cpkt_path} succeed')
+            logger.info(f'Loaded checkpoint from {cpkt_path} succeed')
         else:
-            logger.error(f'checkpoint path:{checkpoint_path} does\'t exist!')
-
+            logger.error(f'Checkpoint path:{checkpoint_path} does\'t exist!')
 
     train_model(args, model_type, model, optimizer,
                 lr_scheduler, exp_name, device, epoch, checkpoint_path)
+
 
 if __name__ == '__main__':
     main()

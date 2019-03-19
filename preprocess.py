@@ -177,10 +177,10 @@ def main():
     create_scp(raw)
     get_random_scp(label_scp_dir, param_scp_dir, lst_dir)
     #cal cmvn to the data
-    calculate_cmvn('train', lst_dir, data_dir, args.model_tpye)
-    convert_to('train', os.path.join(lst_dir, 'train'), data_dir, args.model_tpye)
-    convert_to('valid', os.path.join(lst_dir, 'valid'), data_dir, args.model_tpye)
-    convert_to('test', os.path.join(lst_dir, 'test'), data_dir, args.model_tpye)
+    calculate_cmvn('train', lst_dir, data_dir, args.model_type)
+    convert_to('train', os.path.join(lst_dir, 'train'), data_dir, args.model_type)
+    convert_to('valid', os.path.join(lst_dir, 'valid'), data_dir, args.model_type)
+    convert_to('test', os.path.join(lst_dir, 'test'), data_dir, args.model_type)
 
 if __name__ == '__main__':
     main()

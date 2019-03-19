@@ -71,7 +71,7 @@ class HighwayNet(nn.Module):
 
         return H_output * T_output + input * (1.0 - T_output)
 
-def calculate_cmvn(name, config_dir, output_dir, model_tpye):
+def calculate_cmvn(name, config_dir, output_dir, model_type):
     """Calculate mean and var."""
     logger.info("Calculating mean and var of %s" % name)
     config_filename = open(os.path.join(config_dir, name + '.lst'))
@@ -81,8 +81,8 @@ def calculate_cmvn(name, config_dir, output_dir, model_tpye):
         utt_id, inputs_path, labels_path = line.strip().split()
         logger.info("Reading utterance %s" % utt_id)
         inputs = read_binary_file(inputs_path, hparams['in_channels'])
-        labels = read_binary_file(labels_path, hparams['target_channels'] if model_tpye == 'acoustic' else
-                                  hparams['mgc_target_channels'], dtype=np.float64 if model_tpye == 'acoustic'
+        labels = read_binary_file(labels_path, hparams['target_channels'] if model_type == 'acoustic' else
+                                  hparams['mgc_target_channels'], dtype=np.float64 if model_type == 'acoustic'
         else np.float32)
         if inputs_frame_count == 0:    # create numpy array for accumulating
             ex_inputs = np.sum(inputs, axis=0)

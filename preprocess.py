@@ -165,7 +165,7 @@ def main():
 
     raw = 'raw_' +  args.name
 
-    if os.path.exists(raw):
+    if not os.path.exists(raw):
         os.mkdir(raw)
 
     label_scp_dir = raw + '/prepared_label/label_scp/'

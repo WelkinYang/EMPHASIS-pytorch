@@ -14,6 +14,7 @@ with open('./hparams.json', 'r') as f:
 
 logger = logging.getLogger(__name__)
 
+
 def pad(inputs, padding):
     return F.pad(inputs, (padding // 2, padding // 2 if padding % 2 == 0 else int(padding / 2 + 1)))
 
@@ -51,6 +52,7 @@ def highwaynet(inputs, activation, units=128):
     T = activation[1](T)
     return H * T + inputs * (1.0 - T)
 
+
 class HighwayNet(nn.Module):
     def __init__(self, activation=None, units=128):
         super(HighwayNet, self).__init__()
@@ -71,6 +73,7 @@ class HighwayNet(nn.Module):
 
         return H_output * T_output + input * (1.0 - T_output)
 
+
 def calculate_cmvn(name, config_dir, output_dir, model_type):
     """Calculate mean and var."""
     logger.info("Calculating mean and var of %s" % name)
@@ -82,28 +85,35 @@ def calculate_cmvn(name, config_dir, output_dir, model_type):
         logger.info("Reading utterance %s" % utt_id)
         inputs = read_binary_file(inputs_path, hparams['in_channels'])
         labels = read_binary_file(labels_path, hparams['target_channels'] if model_type == 'acoustic' else
-                                  hparams['mgc_target_channels'], dtype=np.float64 if model_type == 'acoustic'
+        hparams['mgc_target_channels'], dtype=np.float64 if model_type == 'acoustic'
         else np.float32)
-        if inputs_frame_count == 0:    # create numpy array for accumulating
+        if inputs_frame_count == 0:  # create numpy array for accumulating
             ex_inputs = np.sum(inputs, axis=0)
-            ex2_inputs = np.sum(inputs**2, axis=0)
+            ex2_inputs = np.sum(inputs ** 2, axis=0)
             ex_labels = np.sum(labels, axis=0)
-            ex2_labels = np.sum(labels**2, axis=0)
+            ex2_labels = np.sum(labels ** 2, axis=0)
         else:
             ex_inputs += np.sum(inputs, axis=0)
-            ex2_inputs += np.sum(inputs**2, axis=0)
+            ex2_inputs += np.sum(inputs ** 2, axis=0)
             ex_labels += np.sum(labels, axis=0)
-            ex2_labels += np.sum(labels**2, axis=0)
+            ex2_labels += np.sum(labels ** 2, axis=0)
         inputs_frame_count += len(inputs)
         labels_frame_count += len(labels)
 
     mean_inputs = ex_inputs / inputs_frame_count
-    stddev_inputs = np.sqrt(np.abs(ex2_inputs / inputs_frame_count - mean_inputs**2))
+    stddev_inputs = np.sqrt(np.abs(ex2_inputs / inputs_frame_count - mean_inputs ** 2))
     stddev_inputs[stddev_inputs < 1e-20] = 1e-20
 
     mean_labels = ex_labels / labels_frame_count
-    stddev_labels = np.sqrt(np.abs(ex2_labels / labels_frame_count - mean_labels**2))
+    stddev_labels = np.sqrt(np.abs(ex2_labels / labels_frame_count - mean_labels ** 2))
     stddev_labels[stddev_labels < 1e-20] = 1e-20
+
+    if model_type == 'acoustic':
+        mean_labels[0] = 0.0
+        stddev_labels[0] = 1.0
+    elif model_type == 'acoustic_mgc':
+        mean_labels[60] = 0.0
+        stddev_labels[60] = 1.0
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -132,17 +142,17 @@ def convert_to(name, config_dir, output_dir, model_type, apply_cmvn=True):
     for line in config_file:
         if name != 'test':
             utt_id, inputs_path, labels_path = line.strip().split()
-            inputs_outdir = os.path.join(output_dir, name, 'label', f'{utt_id}')
-            labels_outdir = os.path.join(output_dir, name, 'cmp', f'{utt_id}')
+            inputs_outdir = os.path.join(output_dir, name, 'label', f'{utt_id}.lab')
+            labels_outdir = os.path.join(output_dir, name, 'cmp', f'{utt_id}.cmp')
         else:
             utt_id, inputs_path = line.strip().split()
-            inputs_outdir = os.path.join(output_dir, name, 'label', f'{utt_id}')
+            inputs_outdir = os.path.join(output_dir, name, 'label', f'{utt_id}.lab')
 
         logger.info(f'Writing utterance {utt_id} ...')
         inputs = read_binary_file(inputs_path, hparams['in_channels']).astype(np.float32)
         if name != 'test':
             labels = read_binary_file(labels_path, hparams['target_channels'] if model_type == 'acoustic' else
-                                      hparams['mgc_target_channels'], dtype=np.float64 if model_type == 'acoustic'
+            hparams['mgc_target_channels'], dtype=np.float64 if model_type == 'acoustic'
             else np.float32).astype(np.float64 if model_type == 'acoustic' else np.float32)
         else:
             labels = None
@@ -151,9 +161,10 @@ def convert_to(name, config_dir, output_dir, model_type, apply_cmvn=True):
             write_binary_file(inputs, inputs_outdir)
             if labels is not None:
                 labels = (labels - cmvn["mean_labels"]) / cmvn["stddev_labels"]
-                write_binary_file(labels, labels_outdir, dtype=np.float64 if model_type == 'acoustic' else np.float32)
+                write_binary_file(labels, labels_outdir)
 
     config_file.close()
+
 
 def read_binary_file(filename, dimension=None, dtype=np.float32):
     """Read data from matlab binary file (row, col and matrix).
@@ -163,7 +174,8 @@ def read_binary_file(filename, dimension=None, dtype=np.float32):
     if dimension is None:
         read_buffer = open(filename, 'rb')
 
-        rows = 0; cols= 0
+        rows = 0;
+        cols = 0
         rows = struct.unpack('<i', read_buffer.read(4))[0]
         cols = struct.unpack('<i', read_buffer.read(4))[0]
 
@@ -177,7 +189,7 @@ def read_binary_file(filename, dimension=None, dtype=np.float32):
         fid_lab = open(filename, 'rb')
         features = np.fromfile(fid_lab, dtype=dtype)
         fid_lab.close()
-        assert features.size % float(dimension) == 0.0,'specified dimension %s not compatible with data'%(dimension)
+        assert features.size % float(dimension) == 0.0, 'specified dimension %s not compatible with data' % (dimension)
         features = features[:(dimension * (features.size // dimension))]
         features = features.reshape((-1, dimension))
 
